@@ -5,37 +5,54 @@
 <title>Clipboard OCR Web</title>
 <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    #imagePreview { max-width: 300px; border: 1px solid #ccc; margin: 10px auto; }
+    #imagePreview { max-width: 300px; border: 1px solid #ccc; margin: 10px auto; display: none; }
     textarea { width: 90%; height: 200px; margin-top: 10px; }
-    button { margin: 5px; padding: 8px 12px; font-size: 14px; }
+    button { margin: 5px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <h2>📋 Clipboard OCR Web</h2>
-<p>Dán ảnh vào đây (Ctrl+V) để nhận dạng chữ.</p>
+<p>Dán ảnh vào đây (Ctrl+V), sau đó bấm "Nhận dạng OCR".</p>
+
 <img id="imagePreview" alt="Ảnh từ clipboard" />
 <br>
-<textarea id="textOutput" placeholder="Kết quả OCR sẽ hiển thị ở đây..."></textarea><br>
+<button onclick="runOCR()">🔍 Nhận dạng OCR</button>
 <button onclick="copyText()">📄 Copy kết quả</button>
+<br>
+<textarea id="textOutput" placeholder="Kết quả OCR sẽ hiển thị ở đây..."></textarea>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-document.addEventListener("paste", async (event) => {
+let imageBlob = null;
+
+// Nhận ảnh từ clipboard
+document.addEventListener("paste", (event) => {
     const items = event.clipboardData.items;
     for (let item of items) {
         if (item.type.startsWith("image/")) {
-            const blob = item.getAsFile();
-            const url = URL.createObjectURL(blob);
-            document.getElementById("imagePreview").src = url;
-
-            // OCR với Tesseract.js
-            const { data: { text } } = await Tesseract.recognize(blob, 'eng+vie');
-            document.getElementById("textOutput").value = text.replace(/~/g, "-");
+            imageBlob = item.getAsFile();
+            const url = URL.createObjectURL(imageBlob);
+            const img = document.getElementById("imagePreview");
+            img.src = url;
+            img.style.display = "block";
+            document.getElementById("textOutput").value = "";
         }
     }
 });
 
+// Chạy OCR khi bấm nút
+async function runOCR() {
+    if (!imageBlob) {
+        alert("❌ Chưa có ảnh từ clipboard. Hãy Ctrl+V trước.");
+        return;
+    }
+    document.getElementById("textOutput").value = "⏳ Đang xử lý OCR...";
+    const { data: { text } } = await Tesseract.recognize(imageBlob, 'eng+vie');
+    document.getElementById("textOutput").value = text.replace(/~/g, "-");
+}
+
+// Copy text
 function copyText() {
     const text = document.getElementById("textOutput").value;
     navigator.clipboard.writeText(text).then(() => {
